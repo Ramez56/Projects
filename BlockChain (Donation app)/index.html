@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HopeChain DApp</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    div {
+      width: 30%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+    button {
+      width: 100%;
+      margin: 10px 0px 5px 0px;
+    }
+    input {
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>HopeChain DApp (Ganache)</h1>
+    <p>Donate ETH and Track Donations</p>
+    <input type="number" id="donationAmount" step="0.01" placeholder="Amount in ETH" />
+    <button onclick="donate()">Donate</button>
+
+    <button onclick="getMyDonation()">Get My Total Donations</button>
+    <button onclick="getTotalDonations()">View Total Donations</button>
+
+    <input type="number" id="index" placeholder="Record Index (e.g., 0)" />
+    <button onclick="getDonationByIndex()">Get Record by Index</button>
+
+    <button onclick="withdraw()">Admin: Withdraw All</button>
+    <p id="output"></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+  <script>
+    const contractAddress = "0x0C3aDfBA3c45c7105be83FD74e7B790E9e730d1d"; // Ganache
+    const abi = [
+	{
+		"inputs": [],
+		"name": "donate",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "donor",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "DonationReceived",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "admin",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "FundsWithdrawn",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "withdrawFunds",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"stateMutability": "payable",
+		"type": "receive"
+	},
+	{
+		"inputs": [],
+		"name": "admin",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "donations",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "donor",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "donorBalances",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "index",
+				"type": "uint256"
+			}
+		],
+		"name": "getDonationByIndex",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getDonationCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "donor",
+				"type": "address"
+			}
+		],
+		"name": "getDonationInfo",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalDonations",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+    let provider, signer, contract;
+
+    async function connect() {
+      if (!window.ethereum) {
+        alert("Please install MetaMask.");
+        return;
+      }
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      contract = new ethers.Contract(contractAddress, abi, signer);
+    }
+
+    async function donate() {
+      await connect();
+      const amount = document.getElementById("donationAmount").value;
+      try {
+        const tx = await contract.donate({ value: ethers.utils.parseEther(amount) });
+        document.getElementById("output").innerText = "⏳ Waiting for confirmation...";
+        await tx.wait();
+        document.getElementById("output").innerText = "✅ Donation successful!";
+      } catch (err) {
+        document.getElementById("output").innerText = "❌ Error: " + err.message;
+      }
+    }
+
+    async function getMyDonation() {
+      await connect();
+      try {
+        const user = await signer.getAddress();
+        const amount = await contract.getDonationInfo(user);
+        document.getElementById("output").innerText = `Your total donations: ${ethers.utils.formatEther(amount)} ETH`;
+      } catch (err) {
+        document.getElementById("output").innerText = "❌ " + err.message;
+      }
+    }
+
+    async function getTotalDonations() {
+      await connect();
+      try {
+        const total = await contract.totalDonations();
+        document.getElementById("output").innerText = `Total donated: ${ethers.utils.formatEther(total)} ETH`;
+      } catch (err) {
+        document.getElementById("output").innerText = "❌ " + err.message;
+      }
+    }
+
+    async function getDonationByIndex() {
+      await connect();
+      const index = document.getElementById("index").value;
+      try {
+        const record = await contract.getDonationByIndex(index);
+        const date = new Date(record[2] * 1000).toLocaleString();
+        document.getElementById("output").innerText = `Donor: ${record[0]}, Amount: ${ethers.utils.formatEther(record[1])} ETH, Time: ${date}`;
+      } catch (err) {
+        document.getElementById("output").innerText = "❌ " + err.message;
+      }
+    }
+
+    async function withdraw() {
+      await connect();
+      try {
+        const tx = await contract.withdrawFunds();
+        document.getElementById("output").innerText = "⏳ Processing withdrawal...";
+        await tx.wait();
+        document.getElementById("output").innerText = "✅ Funds withdrawn successfully.";
+      } catch (err) {
+        document.getElementById("output").innerText = "❌ " + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
